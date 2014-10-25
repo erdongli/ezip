@@ -37,7 +37,8 @@ char BitFile::getc()
     fs.get(c);
     if (good() && count) {
         unsigned char tmp = static_cast<unsigned char>(c) >> count;
-       tmp |= buffer << (kBitsPerByte - count);
+
+        tmp |= buffer << (kBitsPerByte - count);
         buffer = c;
         c = tmp;
     }
@@ -49,6 +50,7 @@ void BitFile::putc(char c)
 {
     if (count) {
         unsigned char tmp = static_cast<unsigned char>(c) >> count;
+
         tmp |= buffer << (kBitsPerByte - count);
         buffer = c;
         c = tmp;
@@ -71,6 +73,7 @@ void BitFile::putb(char b)
 {
     buffer = (buffer << 1) | (b & 0x1);
     count++;
+
     if (count == kBitsPerByte) {
         fs.put(buffer);
         buffer = 0;
@@ -111,6 +114,7 @@ uint16_t BitFile::get16b()
     if (!good()) {
         return bits;
     }
+
     bp[1] = getc();
 
     return bits;

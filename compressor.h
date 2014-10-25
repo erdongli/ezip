@@ -1,7 +1,6 @@
 #ifndef COMPRESSOR_H
 #define COMPRESSOR_H
 
-#include "bit_file.h"
 #include "circular_array.h"
 #include <string>
 
@@ -16,9 +15,7 @@ private:
         unsigned int offset;
         unsigned int length;
 
-        MatchResult(unsigned int o, unsigned int l)
-            : offset(o), length(l)
-        {}
+        MatchResult();
     };
 
     MatchResult match() const;
