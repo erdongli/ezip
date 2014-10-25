@@ -63,6 +63,9 @@ void Compressor::compress()
             }
         }
     }
+
+    outfile.close();
+    infile.close();
 }
 
 Compressor::MatchResult Compressor::match() const

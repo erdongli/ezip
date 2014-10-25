@@ -1,13 +1,12 @@
 #ifndef DECOMPRESSOR_H
 #define DECOMPRESSOR_H
 
-#include "bit_file.h"
 #include "circular_array.h"
 #include <string>
 
 class Decompressor {
 public:
-    Decompressor(const std::string &ifname, const std::string &ofname);
+    Decompressor(const std::string &i, const std::string &o);
 
     void decompress();
 

@@ -14,7 +14,10 @@ public:
     char at(unsigned int index) const;
 
     void push(char c);
+    void pushn(const char *src, unsigned int len);
     void shrink();
+
+    void copy(char *dest, unsigned int index, unsigned int len) const;
 
 private:
     unsigned int convert(unsigned int index) const;
