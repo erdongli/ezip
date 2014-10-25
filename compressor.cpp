@@ -74,19 +74,13 @@ Compressor::MatchResult Compressor::match() const
     unsigned int offset = 0;
     unsigned int length = 1;
 
-    while (result.length < kMaxEncoded && offset < slidingWindow.getSize()) {
+    while (result.length < kMaxEncoded && offset < slidingWindow.getCapacity()) {
         if (slidingWindow.at(offset) == lookAheadBuffer.at(0)) {
             length = 1;
 
-            while (offset + length < slidingWindow.getSize() &&
-                    length < lookAheadBuffer.getSize() &&
-                    slidingWindow.at(offset+length) == lookAheadBuffer.at(length)) {
-                if (length == kMaxEncoded) {
-                    break;
-                }
-
-                length++;
-            }
+            while (length < lookAheadBuffer.getSize() &&
+                    slidingWindow.at(offset+length) == lookAheadBuffer.at(length) &&
+                    ++length < kMaxEncoded);
 
             if (length > result.length) {
                 result.offset = offset;

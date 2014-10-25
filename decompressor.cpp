@@ -50,12 +50,6 @@ void Decompressor::decompress()
         }
 
         slidingWindow.copy(buffer, offset, length);
-        /*
-        for (int i = 0; i < length; i++) {
-            //os.put(c);
-            buffer[i] = slidingWindow.at(offset+i);
-        }
-        */
         slidingWindow.pushn(buffer, length);
         os.write(buffer, length);
     }
