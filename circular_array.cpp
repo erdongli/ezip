@@ -61,6 +61,7 @@ void CircularArray::shrink()
 
 void CircularArray::copy(char *dest, unsigned int index, unsigned int len) const
 {
+    index = convert(index);
     memcpy(dest, items+index, min(len, capacity-index));
     if (capacity - index < len) {
         memcpy(dest+capacity-index, items, len-(capacity-index));
