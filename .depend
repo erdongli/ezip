@@ -1,6 +1,0 @@
-ezip.o: ezip.cpp compressor.h bit_file.h circular_array.h decompressor.h
-bit_file.o: bit_file.cpp bit_file.h
-circular_array.o: circular_array.cpp circular_array.h
-compressor.o: compressor.cpp compressor.h bit_file.h circular_array.h
-decompressor.o: decompressor.cpp decompressor.h bit_file.h \
-  circular_array.h
