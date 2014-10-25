@@ -1,7 +1,7 @@
 #ifndef COMPRESSOR_H
 #define COMPRESSOR_H
 
-#include "circular_array.h"
+#include "ringbuffer.h"
 #include <string>
 
 class Compressor {
@@ -23,8 +23,8 @@ private:
 
     std::string ifname;
     std::string ofname;
-    CircularArray slidingWindow;
-    CircularArray lookAheadBuffer;
+    RingBuffer slidingWindow;
+    RingBuffer lookAheadBuffer;
 };
 
 #endif

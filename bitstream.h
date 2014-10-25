@@ -1,15 +1,15 @@
-#ifndef BITFILE_H
-#define BITFILE_H
+#ifndef BITSTREAM_H
+#define BITSTREAM_H
 
 #include <cstdint>
 #include <fstream>
 #include <string>
 
-class BitFile {
+class BitStream {
 public:
-    BitFile(const std::string &filename,
-            std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
-    ~BitFile();
+    BitStream(const std::string &filename,
+              std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
+    ~BitStream();
 
     bool good() const;
     void close();

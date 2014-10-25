@@ -1,17 +1,17 @@
-#include "bit_file.h"
+#include "bitstream.h"
 
 using std::ios_base;
 using std::string;
 
 const unsigned int kBitsPerByte = 8;
 
-BitFile::BitFile(const string &filename, ios_base::openmode mode)
+BitStream::BitStream(const string &filename, ios_base::openmode mode)
     : buffer(0), count(0), fs(filename, mode)
 {
     // do nothing
 }
 
-BitFile::~BitFile()
+BitStream::~BitStream()
 {
     if (fs.is_open()) {
         flush();
@@ -19,18 +19,18 @@ BitFile::~BitFile()
     }
 }
 
-bool BitFile::good() const
+bool BitStream::good() const
 {
     return fs.good();
 }
 
-void BitFile::close()
+void BitStream::close()
 {
     flush();
     fs.close();
 }
 
-char BitFile::getc()
+char BitStream::getc()
 {
     char c;
 
@@ -46,7 +46,7 @@ char BitFile::getc()
     return c;
 }
 
-void BitFile::putc(char c)
+void BitStream::putc(char c)
 {
     if (count) {
         unsigned char tmp = static_cast<unsigned char>(c) >> count;
@@ -59,7 +59,7 @@ void BitFile::putc(char c)
     fs.put(c);
 }
 
-char BitFile::getb()
+char BitStream::getb()
 {
     if (!count) {
         fs.get(buffer);
@@ -69,7 +69,7 @@ char BitFile::getb()
     return (buffer >> --count) & 0x1;
 }
 
-void BitFile::putb(char b)
+void BitStream::putb(char b)
 {
     buffer = (buffer << 1) | (b & 0x1);
     count++;
@@ -81,7 +81,7 @@ void BitFile::putb(char b)
     }
 }
 
-uint8_t BitFile::get6b()
+uint8_t BitStream::get6b()
 {
     uint8_t bits = 0;
     unsigned int nRemain = 6;
@@ -96,7 +96,7 @@ uint8_t BitFile::get6b()
     return bits;
 }
 
-void BitFile::put6b(uint8_t bits)
+void BitStream::put6b(uint8_t bits)
 {
     unsigned int nRemain = 6;
 
@@ -105,7 +105,7 @@ void BitFile::put6b(uint8_t bits)
     }
 }
 
-uint16_t BitFile::get16b()
+uint16_t BitStream::get16b()
 {
     uint16_t bits;
     char *bp = reinterpret_cast<char *>(&bits);
@@ -120,7 +120,7 @@ uint16_t BitFile::get16b()
     return bits;
 }
 
-void BitFile::put16b(uint16_t bits)
+void BitStream::put16b(uint16_t bits)
 {
     char *bp = reinterpret_cast<char *>(&bits);
 
@@ -128,7 +128,7 @@ void BitFile::put16b(uint16_t bits)
     putc(bp[1]);
 }
 
-void BitFile::flush()
+void BitStream::flush()
 {
     if (count) {
         putc(buffer << (kBitsPerByte - count));

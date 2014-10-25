@@ -1,5 +1,5 @@
 #include "compressor.h"
-#include "bit_file.h"
+#include "bitstream.h"
 #include <fstream>
 
 const char kUncoded = 0x0;
@@ -25,13 +25,13 @@ Compressor::MatchResult::MatchResult()
 
 void Compressor::compress()
 {
-    ifstream infile(ifname);
-    BitFile outfile(ofname, fstream::out);
+    ifstream is(ifname);
+    BitStream os(ofname, fstream::out);
 
-    while (infile.good() && lookAheadBuffer.getSize() < lookAheadBuffer.getCapacity()) {
-        char c = infile.get();
+    while (is.good() && lookAheadBuffer.getSize() < lookAheadBuffer.getCapacity()) {
+        char c = is.get();
 
-        if (infile.good()) {
+        if (is.good()) {
             lookAheadBuffer.push(c);
         }
     }
@@ -40,22 +40,22 @@ void Compressor::compress()
         MatchResult result = match();
 
         if (result.length <= kMaxUncoded) {
-            outfile.putb(kUncoded);
-            outfile.putc(lookAheadBuffer.at(0));
+            os.putb(kUncoded);
+            os.putc(lookAheadBuffer.at(0));
             result.length = 1;
         }
         else {
-            outfile.putb(kEncoded);
-            outfile.put16b(static_cast<uint16_t>(result.offset));
-            outfile.put6b(static_cast<uint8_t>(result.length-kMaxUncoded-1));
+            os.putb(kEncoded);
+            os.put16b(static_cast<uint16_t>(result.offset));
+            os.put6b(static_cast<uint8_t>(result.length-kMaxUncoded-1));
         }
 
         while (result.length--) {
-            char c = infile.get();
+            char c = is.get();
 
             update();
 
-            if (infile.good()) {
+            if (is.good()) {
                 lookAheadBuffer.push(c);
             }
             else {
@@ -64,8 +64,8 @@ void Compressor::compress()
         }
     }
 
-    outfile.close();
-    infile.close();
+    os.close();
+    is.close();
 }
 
 Compressor::MatchResult Compressor::match() const

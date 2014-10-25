@@ -1,11 +1,11 @@
-#ifndef CIRCULAR_ARRAY_H
-#define CIRCULAR_ARRAY_H
+#ifndef RINGBUFFER_H
+#define RINGBUFFER_H
 
-class CircularArray
+class RingBuffer
 {
 public:
-    CircularArray(unsigned int c);
-    ~CircularArray();
+    RingBuffer(unsigned int c);
+    ~RingBuffer();
 
     unsigned int getSize() const;
     unsigned int getCapacity() const;

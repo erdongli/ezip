@@ -1,7 +1,7 @@
 #ifndef DECOMPRESSOR_H
 #define DECOMPRESSOR_H
 
-#include "circular_array.h"
+#include "ringbuffer.h"
 #include <string>
 
 class Decompressor {
@@ -13,7 +13,7 @@ public:
 private:
     std::string ifname;
     std::string ofname;
-    CircularArray slidingWindow;
+    RingBuffer slidingWindow;
 };
 
 #endif

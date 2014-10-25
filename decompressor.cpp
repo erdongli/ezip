@@ -1,5 +1,5 @@
 #include "decompressor.h"
-#include "bit_file.h"
+#include "bitstream.h"
 #include <fstream>
 
 const char kUncoded = 0x0;
@@ -18,49 +18,49 @@ Decompressor::Decompressor(const string &i, const string &o)
 
 void Decompressor::decompress()
 {
-    BitFile infile(ifname, fstream::in);
-    ofstream outfile(ofname);
+    BitStream is(ifname, fstream::in);
+    ofstream os(ofname);
     char *buffer = new char[kMaxEncoded]();
 
-    while (infile.good()) {
-        char c = infile.getb();
-        if (!infile.good()) {
+    while (is.good()) {
+        char c = is.getb();
+        if (!is.good()) {
             break;
         }
 
         if (c == kUncoded) {
-            c = infile.getc();
-            if (!infile.good()) {
+            c = is.getc();
+            if (!is.good()) {
                 break;
             }
 
-            outfile.put(c);
+            os.put(c);
             slidingWindow.push(c);
             continue;
         }
 
-        unsigned int offset = infile.get16b();
-        if (!infile.good()) {
+        unsigned int offset = is.get16b();
+        if (!is.good()) {
             break;
         }
 
-        unsigned int length = infile.get6b() + kMaxUncoded + 1;
-        if (!infile.good()) {
+        unsigned int length = is.get6b() + kMaxUncoded + 1;
+        if (!is.good()) {
             break;
         }
 
         slidingWindow.copy(buffer, offset, length);
         /*
         for (int i = 0; i < length; i++) {
-            //outfile.put(c);
+            //os.put(c);
             buffer[i] = slidingWindow.at(offset+i);
         }
         */
         slidingWindow.pushn(buffer, length);
-        outfile.write(buffer, length);
+        os.write(buffer, length);
     }
 
     delete[] buffer;
-    outfile.close();
-    infile.close();
+    os.close();
+    is.close();
 }

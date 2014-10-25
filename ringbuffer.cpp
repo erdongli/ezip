@@ -1,41 +1,41 @@
-#include "circular_array.h"
+#include "ringbuffer.h"
 #include <algorithm>
 #include <cstdlib>
 
 using std::min;
 
-CircularArray::CircularArray(unsigned int c)
+RingBuffer::RingBuffer(unsigned int c)
     : head(0), size(0), capacity(c)
 {
     items = new char[capacity]();
 }
 
-CircularArray::~CircularArray()
+RingBuffer::~RingBuffer()
 {
     delete[] items;
 }
 
-unsigned int CircularArray::getSize() const
+unsigned int RingBuffer::getSize() const
 {
     return size;
 }
 
-unsigned int CircularArray::getCapacity() const
+unsigned int RingBuffer::getCapacity() const
 {
     return capacity;
 }
 
-bool CircularArray::empty() const
+bool RingBuffer::empty() const
 {
     return !size;
 }
 
-char CircularArray::at(unsigned int index) const
+char RingBuffer::at(unsigned int index) const
 {
     return items[convert(index)];
 }
 
-void CircularArray::push(char c)
+void RingBuffer::push(char c)
 {
     if (size < capacity) {
         items[convert(size++)] = c;
@@ -46,20 +46,20 @@ void CircularArray::push(char c)
     head = convert(1);
 }
 
-void CircularArray::pushn(const char *src, unsigned int len)
+void RingBuffer::pushn(const char *src, unsigned int len)
 {
     for (int i = 0; i < len; i++) {
         push(src[i]);
     }
 }
 
-void CircularArray::shrink()
+void RingBuffer::shrink()
 {
     head = convert(1);
     size--;
 }
 
-void CircularArray::copy(char *dest, unsigned int index, unsigned int len) const
+void RingBuffer::copy(char *dest, unsigned int index, unsigned int len) const
 {
     index = convert(index);
     memcpy(dest, items+index, min(len, capacity-index));
@@ -68,7 +68,7 @@ void CircularArray::copy(char *dest, unsigned int index, unsigned int len) const
     }
 }
 
-unsigned int CircularArray::convert(unsigned int index) const
+unsigned int RingBuffer::convert(unsigned int index) const
 {
     return (head + index) % capacity;
 }
