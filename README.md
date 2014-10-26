@@ -28,13 +28,13 @@ Decompressor maintains a single ring buffer as the sliding window for dictionary
 
 ## Complexity
 
-Assume the file has N bytes, maximum offset is P, and maximum encoded length is Q.
+Assume the input file has N bytes, maximum offset is P, and maximum encoded length is Q.
 
 ### Compressor
 
 * Runtime:
-- Average: O(NQlog(P))
-- Worst: O(NQP) when the binary search trees resemble linked lists
+        * Average: O(NQlog(P))
+        * Worst: O(NQP) when the binary search trees resemble linked lists
 * Space: O(P+Q)
 
 ### Decompressor
