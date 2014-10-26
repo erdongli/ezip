@@ -33,7 +33,7 @@ Assume the input file has N bytes, maximum offset is P, and maximum encoded leng
 ### Compressor
 
 * Runtime:
-  * Average: O((N/Q)*(Q*log(P/256)+Q*Q*log(P/256)) = O(N*Q*log(P)). O((N/Q)*Q*log(P/256)) is for the searches, and O((N/Q)*Q*Q*log(P/256)) is for the updates.
+  * Average: O((N/Q)*(Q*log(P/256)+Q*Q*log(P/256)) = O(N*Q*log(P)). O((N/Q)*Q*log(P/256)) is for the searches, and O((N/Q)*Q*Q*log(P/256)) is for the dictionary updates.
   * Worst: O(N*Q*P), when the binary search trees resemble linked lists
 * Space: O(P+Q)
 
