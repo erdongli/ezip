@@ -4,27 +4,27 @@ EZip is a compression/decompression utility implemented with LZSS algorithm in C
 
 ## Usage
 
-To build the facility:
+To build the facility, simply do:
 
         make
 
-Compress a file:
+To compress a file:
 
         ./ezip -i <input file name> -o <output file name>
 
-Decompress a file:
+To decompress a file:
 
         ./ezip -d -i <input file name> -o <output file name>
 
 ## Implementation
 
 ### Compressor
-Two ring buffers are used, one as the sliding window for previous sections, and the other as the look-ahead buffer for incoming bytes. 256 binary search trees are built on top of the sliding window, one for every possible initial character. Each tree node corresponds to a series of bytes with different offsets but a constant length (maximum encoded length). Therefore there can be at most K nodes where K is the size of the sliding window. Nodes are inserted in lexicographical order. To find the longest match it first goes to the root with the same initial character, and traverse down the tree.
+Two ring buffers are used, one as the sliding window for previous sections, and the other as the look-ahead buffer for incoming bytes. 256 binary search trees are built on top of the sliding window, one for every possible initial character. Each tree node corresponds to a series of bytes with different starting offsets but a constant length (the maximum encoded length). Therefore there can be at most K nodes where K is the size of the sliding window. Nodes are organized in lexicographical order. To find the longest match it first goes to the root with the same initial character, and traverse down the tree. The compressor employs a greedy algorithm that it will always find the longest match in each search for better runtime performance.
 
-When a new byte is pushed into the sliding window, all nodes that are affected need to be erased and re-inserted into the corresponding trees. The compressor employs a greedy algorithm that it will always find the longest match in each search for better runtime performance.
+When a new byte is pushed into the sliding window, all nodes that are affected need to be erased and re-inserted into the corresponding trees.
 
 ### Decompressor
-Decompressor maintains a single ring buffer as the sliding window for dictionary lookup. It simply goes through each code till end of file.
+Decompressor maintains a single ring buffer as the sliding window for dictionary lookup. It simply goes through each code, decodes it accordingly and update the dictionary till end of file.
 
 ## Complexity
 
