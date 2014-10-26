@@ -77,7 +77,7 @@ void Compressor::compress()
 Compressor::MatchResult Compressor::match() const
 {
     MatchResult result;
-    unsigned int offset = roots[lookAheadBuffer.at(0)];
+    unsigned int offset = roots[static_cast<unsigned char>(lookAheadBuffer.at(0))];
 
     while (result.length < kMaxEncoded && offset != kUnused) {
         unsigned int diff = 0;
@@ -132,11 +132,11 @@ void Compressor::insert(unsigned int index)
     lefts[index] = kUnused;
     rights[index] = kUnused;
 
-    unsigned int curr = roots[slidingWindow[index]];
+    unsigned int curr = roots[static_cast<unsigned char>(slidingWindow[index])];
 
     if (curr == kUnused) {
         parents[index] = kRoot;
-        roots[slidingWindow[index]] = index;
+        roots[static_cast<unsigned char>(slidingWindow[index])] = index;
 
         return;
     }
@@ -153,7 +153,7 @@ void Compressor::insert(unsigned int index)
         lefts[curr] = kUnused;
         rights[curr] = kUnused;
 
-        roots[slidingWindow[index]] = index;
+        roots[static_cast<unsigned char>(slidingWindow[index])] = index;
 
         return;
     }
@@ -243,7 +243,7 @@ void Compressor::erase(unsigned int index)
 
 
     if (parents[index] == kRoot) {
-        roots[slidingWindow[index]] = curr;
+        roots[static_cast<unsigned char>(slidingWindow[index])] = curr;
     } else {
         if (lefts[parents[index]] == index) {
             lefts[parents[index]] = curr;
