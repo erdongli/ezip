@@ -24,7 +24,7 @@ Two ring buffers are used, one as the sliding window for previous sections, and 
 When a new byte is pushed into the sliding window, all nodes that are affected need to be erased and re-inserted into the corresponding trees.
 
 ### Decompressor
-Decompressor maintains a single ring buffer as the sliding window for dictionary lookup. It simply goes through each code, decodes it accordingly and update the dictionary till end of file.
+Decompressor maintains a single ring buffer as the sliding window for dictionary lookup. It simply goes through each code, decodes it accordingly and updates the dictionary till end of file.
 
 ## Complexity
 
