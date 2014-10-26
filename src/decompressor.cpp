@@ -49,12 +49,12 @@ void Decompressor::decompress()
         }
 
         // fill up temp buffer with data
-        for (int i = 0; i < length; i++) {
+        for (unsigned int i = 0; i < length; i++) {
             buffer[i] = slidingWindow[(offset+i)%kWindowSize];
         }
 
         // append sliding window with data stored in temp buffer
-        for (int i = 0; i < length; i++) {
+        for (unsigned int i = 0; i < length; i++) {
             slidingWindow[windowHead] = buffer[i];
             windowHead = (windowHead + 1) % kWindowSize;
         }

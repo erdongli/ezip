@@ -32,9 +32,8 @@ int main(int argc, char *argv[])
                 } else {
                     cerr << "Unknown option '-" << static_cast<char>(optopt) << "'.\n" << endl;
                 }
-                return 1;
             default:
-                abort();
+                return 1;
         }
     }
 

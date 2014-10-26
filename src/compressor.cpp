@@ -104,14 +104,14 @@ void Compressor::updateWindow()
     unsigned int index = windowHead + kWindowSize - kMaxUncodeLength;
 
     // erase affected data
-    for (int len = 0; len < kMaxUncodeLength+1; len++) {
+    for (unsigned int len = 0; len < kMaxUncodeLength+1; len++) {
         erase((index+len)%kWindowSize);
     }
 
     slidingWindow[windowHead] = lookAheadBuffer[bufferHead];
 
     // re-insert affected data
-    for (int len = 0; len < kMaxUncodeLength+1; len++) {
+    for (unsigned int len = 0; len < kMaxUncodeLength+1; len++) {
         insert((index+len)%kWindowSize);
     }
 
