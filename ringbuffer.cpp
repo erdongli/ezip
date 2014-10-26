@@ -20,17 +20,17 @@ unsigned int RingBuffer::getSize() const
     return size;
 }
 
-unsigned int RingBuffer::getCapacity() const
-{
-    return capacity;
-}
-
 bool RingBuffer::empty() const
 {
     return !size;
 }
 
-char RingBuffer::at(unsigned int index) const
+char RingBuffer::operator[](unsigned int index) const
+{
+    return items[convert(index)];
+}
+
+char& RingBuffer::operator[](unsigned int index)
 {
     return items[convert(index)];
 }

@@ -1,9 +1,8 @@
 #include "bitstream.h"
+#include "constants.h"
 
 using std::ios_base;
 using std::string;
-
-const unsigned int kBitsPerByte = 8;
 
 BitStream::BitStream(const string &filename, ios_base::openmode mode)
     : buffer(0), count(0), fs(filename, mode)
@@ -13,6 +12,7 @@ BitStream::BitStream(const string &filename, ios_base::openmode mode)
 
 BitStream::~BitStream()
 {
+    // flush bits out and close fstream if opened
     if (fs.is_open()) {
         flush();
         fs.close();
@@ -37,8 +37,8 @@ char BitStream::getc()
     fs.get(c);
     if (good() && count) {
         unsigned char tmp = static_cast<unsigned char>(c) >> count;
-
         tmp |= buffer << (kBitsPerByte - count);
+
         buffer = c;
         c = tmp;
     }
@@ -50,8 +50,8 @@ void BitStream::putc(char c)
 {
     if (count) {
         unsigned char tmp = static_cast<unsigned char>(c) >> count;
-
         tmp |= buffer << (kBitsPerByte - count);
+
         buffer = c;
         c = tmp;
     }
@@ -105,6 +105,9 @@ void BitStream::put6b(uint8_t bits)
     }
 }
 
+/*
+ * don't need to worry about endianness
+ */
 uint16_t BitStream::get16b()
 {
     uint16_t bits;
@@ -131,6 +134,7 @@ void BitStream::put16b(uint16_t bits)
 void BitStream::flush()
 {
     if (count) {
+        // write out if there is remaining bits
         putc(buffer << (kBitsPerByte - count));
     }
 

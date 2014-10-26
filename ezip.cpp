@@ -15,20 +15,18 @@ int main(int argc, char *argv[])
     string ifname;
     string ofname;
 
-    opterr = 0;
-
     while ((c = getopt(argc, argv, "di:o:")) != -1) {
         switch (c) {
-            case 'd':
+            case 'd':   // decompress mode
                 dflag = true;
                 break;
-            case 'i':
+            case 'i':   // input file name
                 ifname = optarg;
                 break;
-            case 'o':
+            case 'o':   // output file name
                 ofname = optarg;
                 break;
-            case '?':
+            case '?':   // error
                 if (optopt == 'i' || optopt == 'o') {
                     cerr << "Option -" << static_cast<char>(optopt) << " requires an argument.\n" << endl;
                 } else {
@@ -40,6 +38,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    // check required fields
     if (ifname.empty() || ofname.empty()) {
         cerr << "Usage: ezip [-d] -i <input file name> -o <output file name>" << endl;
     }

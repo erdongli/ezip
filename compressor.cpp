@@ -1,24 +1,20 @@
 #include "compressor.h"
 #include "bitstream.h"
+#include "constants.h"
 #include <fstream>
 
-const char kUncoded = 0x0;
-const char kEncoded = 0x1;
-const unsigned int kWindowSize = (1 << 16) - 1;
-const unsigned int kMaxUncoded = 2;
-const unsigned int kMaxEncoded = (1 << 6) + kMaxUncoded;
-const unsigned int kRoot = kWindowSize + 1;
-const unsigned int kUnused = kWindowSize;
+const unsigned int kRootFlag = kWindowSize;
+const unsigned int kUnused = kRootFlag + 1;
 
 using std::fstream; using std::ifstream;
 using std::string;
-using std::vector;
 
 Compressor::Compressor(const string &i, const string &o)
-    : windowHead(0), ifname(i), ofname(o), lookAheadBuffer(kMaxEncoded),
-      slidingWindow(kWindowSize, 0), roots(256, kUnused),
-      parents(kWindowSize, kUnused), lefts(kWindowSize, kUnused),
-      rights(kWindowSize, kUnused)
+    : windowHead(0), ifname(i), ofname(o),
+      slidingWindow(kWindowSize, 0),
+      lookAheadBuffer(kMaxEncodeLength),
+      roots(kNumAsciiChars, kUnused), parents(kWindowSize, kUnused),
+      lefts(kWindowSize, kUnused), rights(kWindowSize, kUnused)
 {
     // do nothing
 }
@@ -34,7 +30,8 @@ void Compressor::compress()
     ifstream is(ifname);
     BitStream os(ofname, fstream::out);
 
-    while (is.good() && lookAheadBuffer.getSize() < lookAheadBuffer.getCapacity()) {
+    // pre-fill look-ahead buffer
+    while (is.good() && lookAheadBuffer.getSize() < kMaxEncodeLength) {
         char c = is.get();
 
         if (is.good()) {
@@ -45,22 +42,24 @@ void Compressor::compress()
     while (!lookAheadBuffer.empty()) {
         MatchResult result = match();
 
-        if (result.length <= kMaxUncoded) {
-            os.putb(kUncoded);
-            os.putc(lookAheadBuffer.at(0));
+        if (result.length <= kMaxUncodeLength) {
+            // uncode
+            os.putb(kUncodedFlag);
+            os.putc(lookAheadBuffer[0]);
             result.length = 1;
         }
         else {
-            os.putb(kEncoded);
+            // encode
+            os.putb(kEncodedFlag);
             os.put16b(static_cast<uint16_t>(result.offset));
-            os.put6b(static_cast<uint8_t>(result.length-kMaxUncoded-1));
+            os.put6b(static_cast<uint8_t>(result.length-kMaxUncodeLength-1));
         }
 
         while (result.length--) {
+            updateWindow();
+
+            // update look-ahead buffer
             char c = is.get();
-
-            update();
-
             if (is.good()) {
                 lookAheadBuffer.push(c);
             }
@@ -77,50 +76,39 @@ void Compressor::compress()
 Compressor::MatchResult Compressor::match() const
 {
     MatchResult result;
-    unsigned int offset = roots[static_cast<unsigned char>(lookAheadBuffer.at(0))];
+    unsigned int offset = roots[static_cast<unsigned char>(lookAheadBuffer[0])];
 
-    while (result.length < kMaxEncoded && offset != kUnused) {
+    while (result.length < kMaxEncodeLength && offset != kUnused) {
         unsigned int diff = 0;
         unsigned int length = 1;
 
         while (length < lookAheadBuffer.getSize() &&
-                !(diff = slidingWindow[(offset+length)%kWindowSize]-lookAheadBuffer.at(length)) &&
-                ++length < kMaxEncoded);
+                !(diff = slidingWindow[(offset+length)%kWindowSize]
+                    -lookAheadBuffer[length]) &&
+                ++length < kMaxEncodeLength);
 
         if (length > result.length) {
             result.offset = offset;
             result.length = length;
         }
 
-        if (diff > 0) {
-            offset = lefts[offset];
-        }
-        else {
-            offset = rights[offset];
-        }
+        offset = diff > 0 ? lefts[offset] : rights[offset];
     }
 
     return result;
 }
 
-void Compressor::update()
+void Compressor::updateWindow()
 {
-    unsigned int index;
+    unsigned int index = windowHead + kWindowSize - kMaxUncodeLength;
 
-    if (windowHead < kMaxUncoded) {
-        index = windowHead + kWindowSize - kMaxUncoded;
-    }
-    else {
-        index = windowHead - kMaxUncoded;
-    }
-
-    for (int len = 0; len < kMaxUncoded+1; len++) {
+    for (int len = 0; len < kMaxUncodeLength+1; len++) {
         erase((index+len)%kWindowSize);
     }
 
-    slidingWindow[windowHead] = lookAheadBuffer.at(0);
+    slidingWindow[windowHead] = lookAheadBuffer[0];
 
-    for (int len = 0; len < kMaxUncoded+1; len++) {
+    for (int len = 0; len < kMaxUncodeLength+1; len++) {
         insert((index+len)%kWindowSize);
     }
 
@@ -134,25 +122,18 @@ void Compressor::insert(unsigned int index)
 
     unsigned int curr = roots[static_cast<unsigned char>(slidingWindow[index])];
 
-    if (curr == kUnused) {
-        parents[index] = kRoot;
-        roots[static_cast<unsigned char>(slidingWindow[index])] = index;
+    // replace root
+    if (curr == kUnused || !compare(index, curr)) {
+        if (!kUnused) {
+            lefts[index] = lefts[curr];
+            rights[index] = rights[curr];
 
-        return;
-    }
+            fixChildren(index);
 
-    unsigned int diff = compare(index, curr);
+            parents[curr] = kUnused;
+        }
 
-    if (!diff) {
-        parents[index] = kRoot;
-        lefts[index] = lefts[curr];
-        rights[index] = rights[curr];
-        fix(index);
-
-        parents[curr] = kUnused;
-        lefts[curr] = kUnused;
-        rights[curr] = kUnused;
-
+        parents[index] = kRootFlag;
         roots[static_cast<unsigned char>(slidingWindow[index])] = index;
 
         return;
@@ -162,6 +143,7 @@ void Compressor::insert(unsigned int index)
         int diff = compare(index, curr);
 
         if (diff < 0) {
+            // branch left
             if (lefts[curr] != kUnused) {
                 curr = lefts[curr];
                 continue;
@@ -170,11 +152,12 @@ void Compressor::insert(unsigned int index)
             // arrives at leave
             lefts[curr] = index;
             parents[index] = curr;
-            fix(index);
+            fixChildren(index);
             return;
         }
 
         if (diff > 0) {
+            // branch right
             if (rights[curr] != kUnused) {
                 curr = rights[curr];
                 continue;
@@ -183,26 +166,16 @@ void Compressor::insert(unsigned int index)
             // arrives at leave
             rights[curr] = index;
             parents[index] = curr;
-            fix(index);
+            fixChildren(index);
             return;
         }
 
         // replace
-        parents[index] = parents[curr];
         lefts[index] = lefts[curr];
         rights[index] = rights[curr];
-        fix(index);
 
-        if (lefts[parents[curr]] == curr) {
-            lefts[parents[curr]] = index;
-        }
-        else {
-            rights[parents[curr]] = index;
-        }
-
-        parents[curr] = kUnused;
-        lefts[curr] = kUnused;
-        rights[curr] = kUnused;
+        fixParent(index, curr);
+        fixChildren(index);
 
         return;
     }
@@ -211,21 +184,17 @@ void Compressor::insert(unsigned int index)
 void Compressor::erase(unsigned int index)
 {
     if (parents[index] == kUnused) {
+        // data is not indexed
         return;
     }
 
-    unsigned int curr;
+    unsigned int curr = lefts[index];
 
     if (lefts[index] == kUnused) {
         curr = rights[index];
     }
-    else if (rights[index] == kUnused) {
-        curr = lefts[index];
-    }
-    else {
+    else if (rights[index] != kUnused) {
         // find pred
-        curr = lefts[index];
-
         while (rights[curr] != kUnused) {
             curr = rights[curr];
         }
@@ -242,30 +211,34 @@ void Compressor::erase(unsigned int index)
     }
 
 
-    if (parents[index] == kRoot) {
-        roots[static_cast<unsigned char>(slidingWindow[index])] = curr;
+    fixParent(curr, index);
+}
+
+void Compressor::fixParent(unsigned int index, unsigned int origin)
+{
+    if (parents[origin] == kRootFlag) {
+        roots[static_cast<unsigned char>(slidingWindow[origin])] = index;
     } else {
-        if (lefts[parents[index]] == index) {
-            lefts[parents[index]] = curr;
+        if (lefts[parents[origin]] == origin) {
+            lefts[parents[origin]] = index;
         }
         else {
-            rights[parents[index]] = curr;
+            rights[parents[origin]] = index;
         }
     }
 
-    parents[curr] = parents[index];
-
-    parents[index] = kUnused;
-    lefts[index] = kUnused;
-    rights[index] = kUnused;
+    parents[index] = parents[origin];
+    parents[origin] = kUnused;
 }
 
-void Compressor::fix(unsigned int index)
+void Compressor::fixChildren(unsigned int index)
 {
+    // fix left child
     if (lefts[index] != kWindowSize) {
         parents[lefts[index]] = index;
     }
 
+    // fix right child
     if (rights[index] != kWindowSize) {
         parents[rights[index]] = index;
     }
@@ -273,15 +246,14 @@ void Compressor::fix(unsigned int index)
 
 int Compressor::compare(unsigned int index0, unsigned int index1)
 {
-    unsigned int offset;
-    int result = 0;
-
-    for (offset = 0; offset < kMaxEncoded; offset++) {
-        result = slidingWindow[(index0+offset)%kWindowSize] - slidingWindow[(index1+offset)%kWindowSize];
-        if (result) {
-            break;
+    // compare characters one by one
+    for (unsigned int i = 0; i < kMaxEncodeLength; i++) {
+        int diff = slidingWindow[(index0+i)%kWindowSize]
+            - slidingWindow[(index1+i)%kWindowSize];
+        if (diff) {
+            return diff;
         }
     }
 
-    return result;
+    return 0;
 }

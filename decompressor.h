@@ -4,6 +4,12 @@
 #include <string>
 #include <vector>
 
+/*
+ * decompress data from i and write to o
+ *
+ * author: erdong li
+ * date: october 25, 2014
+ */
 class Decompressor {
 public:
     Decompressor(const std::string &i, const std::string &o);

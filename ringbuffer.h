@@ -8,10 +8,10 @@ public:
     ~RingBuffer();
 
     unsigned int getSize() const;
-    unsigned int getCapacity() const;
     bool empty() const;
 
-    char at(unsigned int index) const;
+    char operator[](unsigned int index) const;
+    char& operator[](unsigned int index);
 
     void push(char c);
     void pushn(const char *src, unsigned int len);
