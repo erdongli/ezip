@@ -34,7 +34,7 @@ Assume the input file has N bytes, maximum offset is P, and maximum encoded leng
 
 * Runtime:
   * Average: O(N*Q*log(P)). It takes O(N*log(P)) for the searches, and O(N*Q*log(P)) for the updates.
-  * Worst: O(NQP) when the binary search trees resemble linked lists
+  * Worst: O(NQP), when the binary search trees resemble linked lists
 * Space: O(P+Q)
 
 ### Decompressor
