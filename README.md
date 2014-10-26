@@ -1,5 +1,4 @@
 # EZip
-===
 
 EZip is a compression/decompression utility implemented with LZSS algorithm in C++.
 
