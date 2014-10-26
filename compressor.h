@@ -1,7 +1,6 @@
 #ifndef COMPRESSOR_H
 #define COMPRESSOR_H
 
-#include "ringbuffer.h"
 #include <string>
 #include <vector>
 
@@ -39,10 +38,12 @@ private:
     int compare(unsigned int index0, unsigned int index1);
 
     unsigned int windowHead;
+    unsigned int bufferHead;
+    unsigned int bufferSize;
     std::string ifname;
     std::string ofname;
     std::vector<char> slidingWindow;
-    RingBuffer lookAheadBuffer;
+    std::vector<char> lookAheadBuffer;
     std::vector<unsigned int> roots;
     std::vector<unsigned int> parents;
     std::vector<unsigned int> lefts;

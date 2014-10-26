@@ -10,9 +10,10 @@ using std::fstream; using std::ifstream;
 using std::string;
 
 Compressor::Compressor(const string &i, const string &o)
-    : windowHead(0), ifname(i), ofname(o),
+    : windowHead(0), bufferHead(0), bufferSize(0),
+      ifname(i), ofname(o),
       slidingWindow(kWindowSize, 0),
-      lookAheadBuffer(kMaxEncodeLength),
+      lookAheadBuffer(kMaxEncodeLength, 0),
       roots(kNumAsciiChars, kUnused), parents(kWindowSize, kUnused),
       lefts(kWindowSize, kUnused), rights(kWindowSize, kUnused)
 {
@@ -31,21 +32,21 @@ void Compressor::compress()
     BitStream os(ofname, fstream::out);
 
     // pre-fill look-ahead buffer
-    while (is.good() && lookAheadBuffer.getSize() < kMaxEncodeLength) {
+    while (is.good() && bufferSize < kMaxEncodeLength) {
         char c = is.get();
 
         if (is.good()) {
-            lookAheadBuffer.push(c);
+            lookAheadBuffer[bufferSize++] = c;
         }
     }
 
-    while (!lookAheadBuffer.empty()) {
+    while (bufferSize) {
         MatchResult result = match();
 
         if (result.length <= kMaxUncodeLength) {
             // uncode
             os.putb(kUncodedFlag);
-            os.putc(lookAheadBuffer[0]);
+            os.putc(lookAheadBuffer[bufferHead]);
             result.length = 1;
         }
         else {
@@ -60,12 +61,10 @@ void Compressor::compress()
 
             // update look-ahead buffer
             char c = is.get();
-            if (is.good()) {
-                lookAheadBuffer.push(c);
-            }
-            else {
-                lookAheadBuffer.shrink();
-            }
+
+            lookAheadBuffer[bufferHead] = c;
+            bufferHead = (bufferHead + 1) % kMaxEncodeLength;
+            bufferSize -= is.good() ? 0 : 1;
         }
     }
 
@@ -75,16 +74,18 @@ void Compressor::compress()
 
 Compressor::MatchResult Compressor::match() const
 {
+    unsigned int offset;
     MatchResult result;
-    unsigned int offset = roots[static_cast<unsigned char>(lookAheadBuffer[0])];
+
+    offset = roots[static_cast<unsigned char>(lookAheadBuffer[bufferHead])];
 
     while (result.length < kMaxEncodeLength && offset != kUnused) {
         unsigned int diff = 0;
         unsigned int length = 1;
 
-        while (length < lookAheadBuffer.getSize() &&
+        while (length < bufferSize &&
                 !(diff = slidingWindow[(offset+length)%kWindowSize]
-                    -lookAheadBuffer[length]) &&
+                    -lookAheadBuffer[(bufferHead+length)%kMaxEncodeLength]) &&
                 ++length < kMaxEncodeLength);
 
         if (length > result.length) {
@@ -102,12 +103,14 @@ void Compressor::updateWindow()
 {
     unsigned int index = windowHead + kWindowSize - kMaxUncodeLength;
 
+    // erase affected data
     for (int len = 0; len < kMaxUncodeLength+1; len++) {
         erase((index+len)%kWindowSize);
     }
 
-    slidingWindow[windowHead] = lookAheadBuffer[0];
+    slidingWindow[windowHead] = lookAheadBuffer[bufferHead];
 
+    // re-insert affected data
     for (int len = 0; len < kMaxUncodeLength+1; len++) {
         insert((index+len)%kWindowSize);
     }
