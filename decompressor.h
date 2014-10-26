@@ -1,8 +1,8 @@
 #ifndef DECOMPRESSOR_H
 #define DECOMPRESSOR_H
 
-#include "ringbuffer.h"
 #include <string>
+#include <vector>
 
 class Decompressor {
 public:
@@ -11,9 +11,10 @@ public:
     void decompress();
 
 private:
+    unsigned int windowHead;
     std::string ifname;
     std::string ofname;
-    RingBuffer slidingWindow;
+    std::vector<char> slidingWindow;
 };
 
 #endif

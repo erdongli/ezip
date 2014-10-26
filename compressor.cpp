@@ -7,12 +7,18 @@ const char kEncoded = 0x1;
 const unsigned int kWindowSize = (1 << 16) - 1;
 const unsigned int kMaxUncoded = 2;
 const unsigned int kMaxEncoded = (1 << 6) + kMaxUncoded;
+const unsigned int kRoot = kWindowSize + 1;
+const unsigned int kUnused = kWindowSize;
 
 using std::fstream; using std::ifstream;
 using std::string;
+using std::vector;
 
 Compressor::Compressor(const string &i, const string &o)
-    : ifname(i), ofname(o), slidingWindow(kWindowSize), lookAheadBuffer(kMaxEncoded)
+    : windowHead(0), ifname(i), ofname(o), lookAheadBuffer(kMaxEncoded),
+      slidingWindow(kWindowSize, 0), roots(256, kUnused),
+      parents(kWindowSize, kUnused), lefts(kWindowSize, kUnused),
+      rights(kWindowSize, kUnused)
 {
     // do nothing
 }
@@ -71,24 +77,27 @@ void Compressor::compress()
 Compressor::MatchResult Compressor::match() const
 {
     MatchResult result;
-    unsigned int offset = 0;
-    unsigned int length = 1;
+    unsigned int offset = roots[lookAheadBuffer.at(0)];
 
-    while (result.length < kMaxEncoded && offset < slidingWindow.getCapacity()) {
-        if (slidingWindow.at(offset) == lookAheadBuffer.at(0)) {
-            length = 1;
+    while (result.length < kMaxEncoded && offset != kUnused) {
+        unsigned int diff = 0;
+        unsigned int length = 1;
 
-            while (length < lookAheadBuffer.getSize() &&
-                    slidingWindow.at(offset+length) == lookAheadBuffer.at(length) &&
-                    ++length < kMaxEncoded);
+        while (length < lookAheadBuffer.getSize() &&
+                !(diff = slidingWindow[(offset+length)%kWindowSize]-lookAheadBuffer.at(length)) &&
+                ++length < kMaxEncoded);
 
-            if (length > result.length) {
-                result.offset = offset;
-                result.length = length;
-            }
+        if (length > result.length) {
+            result.offset = offset;
+            result.length = length;
         }
 
-        offset++;
+        if (diff > 0) {
+            offset = lefts[offset];
+        }
+        else {
+            offset = rights[offset];
+        }
     }
 
     return result;
@@ -96,5 +105,183 @@ Compressor::MatchResult Compressor::match() const
 
 void Compressor::update()
 {
-    slidingWindow.push(lookAheadBuffer.at(0));
+    unsigned int index;
+
+    if (windowHead < kMaxUncoded) {
+        index = windowHead + kWindowSize - kMaxUncoded;
+    }
+    else {
+        index = windowHead - kMaxUncoded;
+    }
+
+    for (int len = 0; len < kMaxUncoded+1; len++) {
+        erase((index+len)%kWindowSize);
+    }
+
+    slidingWindow[windowHead] = lookAheadBuffer.at(0);
+
+    for (int len = 0; len < kMaxUncoded+1; len++) {
+        insert((index+len)%kWindowSize);
+    }
+
+    windowHead = (windowHead + 1) % kWindowSize;
+}
+
+void Compressor::insert(unsigned int index)
+{
+    lefts[index] = kUnused;
+    rights[index] = kUnused;
+
+    unsigned int curr = roots[slidingWindow[index]];
+
+    if (curr == kUnused) {
+        parents[index] = kRoot;
+        roots[slidingWindow[index]] = index;
+
+        return;
+    }
+
+    unsigned int diff = compare(index, curr);
+
+    if (!diff) {
+        parents[index] = kRoot;
+        lefts[index] = lefts[curr];
+        rights[index] = rights[curr];
+        fix(index);
+
+        parents[curr] = kUnused;
+        lefts[curr] = kUnused;
+        rights[curr] = kUnused;
+
+        roots[slidingWindow[index]] = index;
+
+        return;
+    }
+
+    while (curr != kUnused) {
+        int diff = compare(index, curr);
+
+        if (diff < 0) {
+            if (lefts[curr] != kUnused) {
+                curr = lefts[curr];
+                continue;
+            }
+
+            // arrives at leave
+            lefts[curr] = index;
+            parents[index] = curr;
+            fix(index);
+            return;
+        }
+
+        if (diff > 0) {
+            if (rights[curr] != kUnused) {
+                curr = rights[curr];
+                continue;
+            }
+
+            // arrives at leave
+            rights[curr] = index;
+            parents[index] = curr;
+            fix(index);
+            return;
+        }
+
+        // replace
+        parents[index] = parents[curr];
+        lefts[index] = lefts[curr];
+        rights[index] = rights[curr];
+        fix(index);
+
+        if (lefts[parents[curr]] == curr) {
+            lefts[parents[curr]] = index;
+        }
+        else {
+            rights[parents[curr]] = index;
+        }
+
+        parents[curr] = kUnused;
+        lefts[curr] = kUnused;
+        rights[curr] = kUnused;
+
+        return;
+    }
+}
+
+void Compressor::erase(unsigned int index)
+{
+    if (parents[index] == kUnused) {
+        return;
+    }
+
+    unsigned int curr;
+
+    if (lefts[index] == kUnused) {
+        curr = rights[index];
+    }
+    else if (rights[index] == kUnused) {
+        curr = lefts[index];
+    }
+    else {
+        // find pred
+        curr = lefts[index];
+
+        while (rights[curr] != kUnused) {
+            curr = rights[curr];
+        }
+
+        if (curr != lefts[index]) {
+            rights[parents[curr]] = lefts[curr];
+            parents[lefts[curr]] = parents[curr];
+            lefts[curr] = lefts[index];
+            parents[lefts[index]] = curr;
+        }
+
+        rights[curr] = rights[index];
+        parents[rights[index]] = curr;
+    }
+
+
+    if (parents[index] == kRoot) {
+        roots[slidingWindow[index]] = curr;
+    } else {
+        if (lefts[parents[index]] == index) {
+            lefts[parents[index]] = curr;
+        }
+        else {
+            rights[parents[index]] = curr;
+        }
+    }
+
+    parents[curr] = parents[index];
+
+    parents[index] = kUnused;
+    lefts[index] = kUnused;
+    rights[index] = kUnused;
+}
+
+void Compressor::fix(unsigned int index)
+{
+    if (lefts[index] != kWindowSize) {
+        parents[lefts[index]] = index;
+    }
+
+    if (rights[index] != kWindowSize) {
+        parents[rights[index]] = index;
+    }
+}
+
+int Compressor::compare(unsigned int index0, unsigned int index1)
+{
+    unsigned int offset;
+    int result = 0;
+
+    for (offset = 0; offset < kMaxEncoded; offset++) {
+        result = slidingWindow[(index0+offset)%kWindowSize] - slidingWindow[(index1+offset)%kWindowSize];
+        if (result) {
+            break;
+        }
+    }
+
+    return result;
 }

@@ -11,7 +11,7 @@ using std::fstream; using std::ofstream;
 using std::string;
 
 Decompressor::Decompressor(const string &i, const string &o)
-    : ifname(i), ofname(o), slidingWindow(kWindowSize)
+    : windowHead(0), ifname(i), ofname(o), slidingWindow(kWindowSize, 0)
 {
     // do nothing
 }
@@ -35,7 +35,8 @@ void Decompressor::decompress()
             }
 
             os.put(c);
-            slidingWindow.push(c);
+            slidingWindow[windowHead] = c;
+            windowHead = (windowHead + 1) % kWindowSize;
             continue;
         }
 
@@ -49,8 +50,13 @@ void Decompressor::decompress()
             break;
         }
 
-        slidingWindow.copy(buffer, offset, length);
-        slidingWindow.pushn(buffer, length);
+        for (int i = 0; i < length; i++) {
+            buffer[i] = slidingWindow[(offset+i)%kWindowSize];
+        }
+        for (int i = 0; i < length; i++) {
+            slidingWindow[windowHead] = buffer[i];
+            windowHead = (windowHead + 1) % kWindowSize;
+        }
         os.write(buffer, length);
     }
 
