@@ -45,4 +45,4 @@ Assume the input file has N bytes, maximum offset is P, and maximum encoded leng
 
 * nulltest: 0 byte
 * smalltest: 38 bytes
-* largetest: 6.5 MB
+* largetest: 5.6 MB
