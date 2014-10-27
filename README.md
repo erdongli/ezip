@@ -45,7 +45,7 @@ Assume the input file has N bytes, maximum offset is P, and maximum encoded leng
 
 ## Tests
 
-The code is fully tested under OS X Mavericks 10.9.5 and ubuntu 14.04 LTS. Three test cases are provided including:
+The code is fully tested under OS X Mavericks 10.9.5 and Ubuntu 14.04 LTS. Three test cases are provided including:
 
 * nulltest: 0 byte
 * smalltest: 38 bytes
